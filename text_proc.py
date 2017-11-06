@@ -19,7 +19,7 @@ def write_file(filename, text):
 
 def main():
     # get a file's text
-    filename = 'corpus/sabotage.txt'
+    filename = 'corpus/target_study.txt'
     # open the file and get the lines
     with open(filename, 'r') as fin:
         raw_text = fin.readlines()
