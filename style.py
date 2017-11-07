@@ -1,6 +1,6 @@
 import nltk
 import string
-
+from nltk.probability import FreqDist
 
 def get_raw_text(fn):
     """Given a filename, get the raw text"""
@@ -30,6 +30,17 @@ def no_spaces(text):
     new_text = [[s for s in x if s] for x in text]
     return new_text
 
+def frequency1(text):
+    """Given the lists without any empty slots, turn the thing into one giant list of words and run a FreqDist on it"""
+    new_text = []
+    for line in text:
+        for item in line:
+            new_text.append(item)
+    fdist = nltk.FreqDist(new_text)
+    modals = ['can', 'could', 'may', 'might', 'must', 'will']
+    for m in modals:
+        print(m + ':', fdist[m], end=' ')
+
 def main():
     # get a filename
     # get raw text
@@ -49,14 +60,9 @@ def main():
     lower_tokens = lowercase(tokens)
     without_punct = no_punctuation(lower_tokens)
     without_spaces = no_spaces(without_punct)
-    print(without_spaces)
+    fdist1 = frequency1(without_spaces)
+    print(fdist1)
 
-    # print(lower_tokens)
-
-    # fdist = nltk.FreqDist(lower_tokens)
-    # modals = ['can', 'could', 'may', 'might', 'must', 'will']
-    # for m in modals:
-    #     print (m + ':', fdist[m], end=' ')
 
 
 if __name__ == "__main__":
