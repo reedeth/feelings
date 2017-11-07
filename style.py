@@ -21,11 +21,14 @@ def lowercase(all_tokens):
     return new_tokens
 
 def no_punctuation(text):
+    """Given the lowercased text, remove punctuation"""
     new_text = [[''.join(c for c in s if c not in string.punctuation) for s in y] for y in text]
     return new_text
 
-# def no_spaces(text):
-#     new_text = [[s for s in x if s] for x in text]
+def no_spaces(text):
+    """Given the text without punctuation, remove empty items from lists"""
+    new_text = [[s for s in x if s] for x in text]
+    return new_text
 
 def main():
     # get a filename
@@ -45,9 +48,8 @@ def main():
     tokens = tokenize(raw_text)
     lower_tokens = lowercase(tokens)
     without_punct = no_punctuation(lower_tokens)
-    print(without_punct)
-    # without_spaces = no_spaces(without_punct)
-    # print(without_spaces)
+    without_spaces = no_spaces(without_punct)
+    print(without_spaces)
 
     # print(lower_tokens)
 
