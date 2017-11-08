@@ -37,9 +37,9 @@ def frequency1(text):
         for item in line:
             new_text.append(item)
     fdist = nltk.FreqDist(new_text)
-    modals = ['can', 'could', 'may', 'might', 'must', 'will']
+    modals = ['can', 'could', 'may', 'might', 'must', 'will', 'what', 'when', 'where', 'why']
     for m in modals:
-        print(m + ':', fdist[m], end=' ')
+        print(m + ':', fdist[m])
 
 def main():
     # get a filename
