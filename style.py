@@ -5,6 +5,13 @@ from textblob import TextBlob
 import matplotlib.pyplot as plt
 from bokeh.plotting import figure, output_file, show
 
+# TODO: clean up the classing
+# TODO: do this per poem and per book?
+# TODO: potentially smooth it
+# TODO: make your own classifier to be more nuanced
+# TODO: filter based on polarity of poems, directing me in close reading directions?
+# TODO: make manifest function for corpus class once we have a directory of poems.
+
 class Text(object):
     def __init__(self, fn):
         # attributes live here
@@ -20,11 +27,6 @@ class Text(object):
         self.sentiments = self.get_sentiment()
         self.sentiment_values = self.get_sentiment_values()
 
-    # def bokeh_graph(self):
-    #     output_file('bokeh_test.html')
-    #     p = figure(plot_width=400, plot_height=400)
-    #     p.line(self.sentiment_values, line_width=2)
-    #     show(p)
 
     def graph_sentiment(self):
         plt.plot(self.sentiment_values)
@@ -89,6 +91,19 @@ class Text(object):
         modals = ['can', 'could', 'may', 'might', 'must', 'will']
         for m in modals:
             print(m + ':', fdist[m], end=' ')
+
+
+class Corpus(object):
+    def __init__(self, corpus_dir):
+        self.dir = corpus_dir
+        self.files = self.manifest()
+        self.texts = self.get_texts()
+
+    def manifest(self):
+        pass
+
+    def get_texts(self):
+        pass
 
 def main():
     # get a filename
