@@ -2,6 +2,8 @@ import nltk
 import string
 from nltk.probability import FreqDist
 
+#hi this is a test
+
 def get_raw_text(fn):
     """Given a filename, get the raw text"""
     with open(fn, 'r') as fin:
