@@ -3,7 +3,7 @@ import string
 from nltk.probability import FreqDist
 from textblob import TextBlob
 import matplotlib.pyplot as plt
-from bokeh.plotting import figure, output_file, show
+#from bokeh.plotting import figure, output_file, show
 
 # TODO: clean up the classing
 # TODO: do this per poem and per book?
@@ -26,7 +26,7 @@ class Text(object):
         self.stringified_sentences = self.get_stringified_sentences()
         self.sentiments = self.get_sentiment()
         self.sentiment_values = self.get_sentiment_values()
-
+        self.graphed = self.graph_sentiment()
 
     def graph_sentiment(self):
         plt.plot(self.sentiment_values)
@@ -127,7 +127,7 @@ def main():
     # without_punct = no_punctuation(lower_tokens)
     # without_spaces = no_spaces(without_punct)
     # fdist1 = frequency1(without_spaces)
-    print(fdist1)
+    # print(fdist1)
 
 
 
