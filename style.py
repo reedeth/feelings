@@ -1,9 +1,7 @@
 import nltk
 import string
-from nltk.probability import FreqDist
 from textblob import TextBlob
 import matplotlib.pyplot as plt
-#from bokeh.plotting import figure, output_file, show
 
 # TODO: clean up the classing
 # TODO: do this per poem and per book?
@@ -11,6 +9,7 @@ import matplotlib.pyplot as plt
 # TODO: make your own classifier to be more nuanced
 # TODO: filter based on polarity of poems, directing me in close reading directions?
 # TODO: make manifest function for corpus class once we have a directory of poems.
+
 
 class Text(object):
     def __init__(self, fn):
@@ -39,8 +38,8 @@ class Text(object):
         return [val.polarity for val in self.sentiments]
 
     def get_sentiment(self):
-        return [TextBlob(line).sentiment for line in self.stringified_sentences]
-
+        return [TextBlob(line).sentiment
+                for line in self.stringified_sentences]
 
     # methods live here
     def flatten(self, thing):
