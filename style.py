@@ -2,6 +2,7 @@ import nltk
 import string
 from textblob import TextBlob
 import matplotlib.pyplot as plt
+import os
 
 # TODO: clean up the classing
 # TODO: do this per poem and per book?
@@ -25,14 +26,32 @@ class Text(object):
         self.stringified_sentences = self.get_stringified_sentences()
         self.sentiments = self.get_sentiment()
         self.sentiment_values = self.get_sentiment_values()
-        self.graphed = self.graph_sentiment()
+        self.sentiments_with_lines = self.get_sentiment_with_lines()
+        self.most_positive = self.sentiments_with_lines[-40:]
+        self.most_negative = self.sentiments_with_lines[:40]
+        # self.graphed = self.graph_sentiment()
 
     def graph_sentiment(self):
         plt.plot(self.sentiment_values)
         plt.ylabel('polarity')
         plt.xlabel('position in text')
-        plt.title('Sentiment Analysis of Text')
+        plt.title('Sentiment Analysis of ' + self.filename)
+        # plt.save('sentiment_graphs/' + self.filename + '.png')
         plt.show()
+
+    def get_sentiment_with_lines(self):
+        sentiments = [(line, TextBlob(line).sentiment.polarity) for line in self.stringified_sentences]
+        # print(sentiments)
+        sentiments.sort(key=lambda x: x[1])
+        return sentiments
+
+
+    def most_positive_five(self):
+        # go over every line in the text
+        pass
+
+    def most_negative_five(self):
+        pass
 
     def get_sentiment_values(self):
         return [val.polarity for val in self.sentiments]
@@ -47,7 +66,6 @@ class Text(object):
 
     def get_stringified_sentences(self):
         return [' '.join(line) for line in self.processed_tokens]
-
 
     def get_stringified_text(self):
         return ' '.join(self.flattened_tokens)
@@ -67,7 +85,8 @@ class Text(object):
 
     def lowercase(self):
         """Given the tokenized text, lowercase everything"""
-        new_tokens = [[item.lower() for item in each_token] for each_token in self.tokens]
+        new_tokens = [[item.lower()
+                      for item in each_token] for each_token in self.tokens]
         return new_tokens
 
     def no_punctuation(self):
@@ -81,7 +100,9 @@ class Text(object):
         return new_text
 
     def frequency1(self):
-        """Given the lists without any empty slots, turn the thing into one giant list of words and run a FreqDist on it"""
+        """Given the lists without any empty slots,
+            turn the thing into one giant list of
+            words and run a FreqDist on it"""
         new_text = []
         for line in self.processed_tokens:
             for item in line:
@@ -96,26 +117,24 @@ class Corpus(object):
     def __init__(self, corpus_dir):
         self.dir = corpus_dir
         self.files = self.manifest()
-        self.texts = self.get_texts()
+        self.texts = self.make_texts()
 
     def manifest(self):
-        pass
+        """given a corpus directory, make indexed text objects from it"""
+        texts = []
+        for (root, _, files) in os.walk(self.dir):
+            for fn in files:
+                if fn[0] == '.':
+                    pass
+                else:
+                    texts.append(os.path.join(root, fn))
+        return texts
 
-    def get_texts(self):
-        pass
+    def make_texts(self):
+        return [Text(fn) for fn in self.files]
+
 
 def main():
-    # get a filename
-    # get raw text
-    # preprocess that text:
-    # 1. tokenize
-    # 2. lowercase
-    # 3. Get rid of punctuation
-    # 4. get rid of white space
-    # segment if you care (if you care about sentences,
-    #   lines, stanzas, poems)
-    # tag with parts of speech
-    # do the stuff you actually care about
     filename = 'corpus/sabotage_clean.txt'
     our_text = Text(filename)
     our_text.raw_text
@@ -128,6 +147,12 @@ def main():
     # fdist1 = frequency1(without_spaces)
     # print(fdist1)
 
+
+# use for most positive and negative in the interpreter:
+# import style
+# corpus = style.Corpus('corpus/test')
+# corpus.texts[0].most_negative
+# corpus.texts[0].most_positive
 
 
 if __name__ == "__main__":
