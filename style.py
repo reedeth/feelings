@@ -3,6 +3,7 @@ import string
 from textblob import TextBlob
 import matplotlib.pyplot as plt
 import os
+import csv
 
 # TODO: clean up the classing
 # TODO: do this per poem and per book?
@@ -27,7 +28,8 @@ class Text(object):
         self.sentiments = self.get_sentiment()
         self.sentiment_values = self.get_sentiment_values()
         self.sentiments_with_lines = self.get_sentiment_with_lines()
-        #self.unsorted_csv_of_text = self.get_unsorted_csv_of_text()
+        self.lines_sorted_by_sentiment = self.get_lines_sorted_by_sentiment()
+        self.unsorted_csv_of_text = self.get_unsorted_csv_of_text()
 
         self.most_positive = self.most_positive_five()
         self.most_negative = self.most_negative_five()
@@ -47,19 +49,24 @@ class Text(object):
 
     def get_sentiment_with_lines(self):
         sentiments = [(line, TextBlob(line).sentiment.polarity) for line in self.stringified_sentences]
-        sentiments.sort(key=lambda x: x[1])
         return sentiments
 
-    # def get_unsorted_csv_of_text(self):
-    #     import csv
-    #     with open('csvs/target_study_csv.csv', 'w') as fout:
-    #         csvwriter = csv.writer(fout)
-    #         for text, value in self.sentiments_with_lines:
-    #             csvwriter.writerow(text, value)
+    def get_lines_sorted_by_sentiment(self):
+        sorted_lines = self.sentiments_with_lines
+        sorted_lines.sort(key=lambda x: x[1])
+        return sorted_lines
+
+    def get_unsorted_csv_of_text(self):
+        pass
+        # with open('corpus/csvs/target_study_csv.csv', 'w') as fout:
+        #     csvwriter = csv.writer(fout)
+        #     csvwriter.writerow(['TEXT', 'VALUE'])
+        #     for text, value in self.sentiments_with_lines:
+        #         csvwriter.writerow([text, value])
 
     def most_positive_five(self):
         # go over every line in the text
-        results = self.sentiments_with_lines[-40:]
+        results = self.lines_sorted_by_sentiment[-40:]
         for line, val in results:
             print(line)
             print(val)
@@ -67,12 +74,13 @@ class Text(object):
         return results
 
     def most_negative_five(self):
-        results = self.sentiments_with_lines[:40]
-        for line, val in results:
-            print(line)
-            print(val)
-            print('=====')
-        return results
+        pass
+        # results = self.lines_sorted_by_sentiment[:40]
+        # for line, val in results:
+        #     print(line)
+        #     print(val)
+        #     print('=====')
+        # return results
 
     def get_sentiment_values(self):
         return [val.polarity for val in self.sentiments]
