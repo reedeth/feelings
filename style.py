@@ -27,8 +27,11 @@ class Text(object):
         self.sentiments = self.get_sentiment()
         self.sentiment_values = self.get_sentiment_values()
         self.sentiments_with_lines = self.get_sentiment_with_lines()
-        self.most_positive = self.sentiments_with_lines[-40:]
-        self.most_negative = self.sentiments_with_lines[:40]
+        self.most_positive = self.most_positive_five()
+        self.most_negative = self.most_negative_five()
+
+        # self.most_positive = self.sentiments_with_lines[-40:]
+        # self.most_negative = self.sentiments_with_lines[:40]
         # self.graphed = self.graph_sentiment()
 
     def graph_sentiment(self):
@@ -45,13 +48,14 @@ class Text(object):
         sentiments.sort(key=lambda x: x[1])
         return sentiments
 
-
     def most_positive_five(self):
         # go over every line in the text
-        pass
+        results = self.sentiments_with_lines[-40:]
+        return results
 
     def most_negative_five(self):
-        pass
+        results = self.sentiments_with_lines[:40]
+        return results
 
     def get_sentiment_values(self):
         return [val.polarity for val in self.sentiments]
@@ -146,7 +150,8 @@ def main():
     # without_spaces = no_spaces(without_punct)
     # fdist1 = frequency1(without_spaces)
     # print(fdist1)
-
+    corpus = style.Corpus('corpust/test')
+    corpus.texts[0].most_negative
 
 # use for most positive and negative in the interpreter:
 # import style
