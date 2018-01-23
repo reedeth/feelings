@@ -27,14 +27,15 @@ class Text(object):
         self.sentiments = self.get_sentiment()
         self.sentiment_values = self.get_sentiment_values()
         self.sentiments_with_lines = self.get_sentiment_with_lines()
-        self.unsorted_csv_of_text = self.get_unsorted_csv_of_text()
+        #self.unsorted_csv_of_text = self.get_unsorted_csv_of_text()
 
         self.most_positive = self.most_positive_five()
         self.most_negative = self.most_negative_five()
 
         # self.most_positive = self.sentiments_with_lines[-40:]
         # self.most_negative = self.sentiments_with_lines[:40]
-        self.graphed = self.graph_sentiment()
+
+        # self.graphed = self.graph_sentiment()
 
     def graph_sentiment(self):
         plt.plot(self.sentiment_values)
@@ -46,20 +47,23 @@ class Text(object):
 
     def get_sentiment_with_lines(self):
         sentiments = [(line, TextBlob(line).sentiment.polarity) for line in self.stringified_sentences]
-        # print(sentiments)
-        #sentiments.sort(key=lambda x: x[1])
+        sentiments.sort(key=lambda x: x[1])
         return sentiments
 
-    def get_unsorted_csv_of_text(self):
-        import csv
-        with open('csvs/target_study_csv.csv', 'w') as fout:
-            csvwriter = csv.writer(fout)
-            for text, value in self.sentiments_with_lines:
-                csvwriter.writerow(text, value)
+    # def get_unsorted_csv_of_text(self):
+    #     import csv
+    #     with open('csvs/target_study_csv.csv', 'w') as fout:
+    #         csvwriter = csv.writer(fout)
+    #         for text, value in self.sentiments_with_lines:
+    #             csvwriter.writerow(text, value)
 
     def most_positive_five(self):
         # go over every line in the text
         results = self.sentiments_with_lines[-40:]
+        for line, val in results:
+            print(line)
+            print(val)
+            print('=====')
         return results
 
     def most_negative_five(self):
