@@ -68,6 +68,10 @@ class Text(object):
 
     def most_negative_five(self):
         results = self.sentiments_with_lines[:40]
+        for line, val in results:
+            print(line)
+            print(val)
+            print('=====')
         return results
 
     def get_sentiment_values(self):
