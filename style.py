@@ -30,7 +30,6 @@ class Text(object):
         self.sentiments_with_lines = self.get_sentiment_with_lines()
         self.lines_sorted_by_sentiment = self.get_lines_sorted_by_sentiment()
         self.unsorted_csv_of_text = self.get_unsorted_csv_of_text()
-
         self.most_positive = self.most_positive_five()
         self.most_negative = self.most_negative_five()
 
@@ -52,26 +51,27 @@ class Text(object):
         return sentiments
 
     def get_lines_sorted_by_sentiment(self):
-        sorted_lines = self.sentiments_with_lines
-        sorted_lines.sort(key=lambda x: x[1])
-        return sorted_lines
+        pass
+        # sorted_lines = self.sentiments_with_lines
+        # sorted_lines.sort(key=lambda x: x[1])
+        # return sorted_lines
 
     def get_unsorted_csv_of_text(self):
-        pass
-        # with open('corpus/csvs/target_study_csv.csv', 'w') as fout:
-        #     csvwriter = csv.writer(fout)
-        #     csvwriter.writerow(['TEXT', 'VALUE'])
-        #     for text, value in self.sentiments_with_lines:
-        #         csvwriter.writerow([text, value])
+        with open('corpus/csvs/black_art_csv.csv', 'w') as fout:
+            csvwriter = csv.writer(fout)
+            csvwriter.writerow(['TEXT', 'VALUE'])
+            for text, value in self.sentiments_with_lines:
+                csvwriter.writerow([text, value])
 
     def most_positive_five(self):
         # go over every line in the text
-        results = self.lines_sorted_by_sentiment[-40:]
-        for line, val in results:
-            print(line)
-            print(val)
-            print('=====')
-        return results
+        pass
+        # results = self.lines_sorted_by_sentiment[-40:]
+        # for line, val in results:
+        #     print(line)
+        #     print(val)
+        #     print('=====')
+        # return results
 
     def most_negative_five(self):
         pass
@@ -164,7 +164,7 @@ class Corpus(object):
 
 
 def main():
-    filename = 'corpus/sabotage_clean.txt'
+    filename = 'corpus/test/black_art_clean.txt'
     our_text = Text(filename)
     our_text.raw_text
     # filename = 'corpus/sabotage_clean.txt'
