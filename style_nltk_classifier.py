@@ -3,6 +3,7 @@ import string
 from textblob import TextBlob
 from textblob.sentiments import NaiveBayesAnalyzer
 from textblob import Blobber
+from textblob.taggers import NLTKTagger
 import matplotlib.pyplot as plt
 import os
 import csv
@@ -91,7 +92,7 @@ class Text(object):
         # return [val.polarity for val in self.sentiments]
 
     def get_sentiment(self):
-        return [Blobber(line, analyzer=NaiveBayesAnalyzer()).sentiment
+        return [Blobber(line, analyzer=NaiveBayesAnalyzer(), pos_tagger=NLTKTagger()).sentiment
                 for line in self.stringified_sentences]
 
     # methods live here
