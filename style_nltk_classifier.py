@@ -4,6 +4,7 @@ from textblob import TextBlob
 from textblob.sentiments import NaiveBayesAnalyzer
 from textblob import Blobber
 from textblob.taggers import NLTKTagger
+from textblob.tokenizers import WordTokenizer, sent_tokenize, word_tokenize
 import matplotlib.pyplot as plt
 import os
 import csv
@@ -50,7 +51,7 @@ class Text(object):
         plt.show()
 
     def get_sentiment_with_lines(self):
-        sentiments = [(line, Blobber(line, analyzer=NaiveBayesAnalyzer).sentiment) for line in self.stringified_sentences]
+        sentiments = [(line, Blobber(line, analyzer=NaiveBayesAnalyzer()).sentiment) for line in self.stringified_sentences]
         print(sentiments)
         return sentiments
 
@@ -92,7 +93,7 @@ class Text(object):
         # return [val.polarity for val in self.sentiments]
 
     def get_sentiment(self):
-        return [Blobber(line, analyzer=NaiveBayesAnalyzer(), pos_tagger=NLTKTagger()).sentiment
+        return [Blobber(line, analyzer=NaiveBayesAnalyzer(), pos_tagger=NLTKTagger(), tokenizer=WordTokenizer()).sentiment
                 for line in self.stringified_sentences]
 
     # methods live here
