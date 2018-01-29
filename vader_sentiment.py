@@ -6,13 +6,10 @@ import os
 import csv
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
-# TODO: clean up the classing
-# TODO: do this per poem and per book?
-# TODO: potentially smooth it
-# TODO: make your own classifier to be more nuanced
-# TODO: filter based on polarity of poems, directing me in close reading directions?
-# TODO: make manifest function for corpus class once we have a directory of poems.
 
+# TODO: make your own classifier to be more nuanced
+# TODO: train on our own data
+# TODO: word2vec
 
 class Text(object):
     def __init__(self, fn):
