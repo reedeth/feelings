@@ -12,10 +12,13 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 # TODO: word2vec
 
 class Text(object):
-    def __init__(self, fn):
+    def __init__(self, fn, the_raw_text=False):
         # attributes live here
         self.filename = fn
-        self.raw_text = self.get_raw_text()
+        if not the_raw_text:
+            self.raw_text = self.get_raw_text()
+        else:
+            self.raw_text = the_raw_text.split('\n')
         self.tokens = self.tokenize()
         self.processed_tokens = self.lowercase()
         self.processed_tokens = self.no_punctuation()
@@ -26,15 +29,18 @@ class Text(object):
         self.sentiments = self.get_sentiment(usetextblob=False)
         self.sentiment_values = self.get_sentiment_values()
         self.sentiments_with_lines = self.get_sentiment_with_lines()
+        self.total_sentiment = self.get_total_sentiment()
         # self.lines_sorted_by_sentiment = self.get_lines_sorted_by_sentiment()
-        self.get_unsorted_csv_of_text()
+        # self.get_unsorted_csv_of_text()
         # self.most_positive = self.most_positive_five()
-        # self.most_negative = self.most_negative_five()
-
+        # self.most_negative = self.most_negative_five()\
         # self.most_positive = self.sentiments_with_lines[-40:]
         # self.most_negative = self.sentiments_with_lines[:40]
-
         # self.graphed = self.graph_sentiment()
+
+    def get_total_sentiment(self):
+        """gives the average sentiment for a poem"""
+        return sum(self.sentiment_values) / len(self.sentiment_values)
 
     def graph_sentiment(self):
         plt.plot(self.sentiment_values)
@@ -176,27 +182,47 @@ class Corpus(object):
         return texts
 
     def make_texts(self):
-        return [Text(fn) for fn in self.files]
+        the_texts = []
+        for fn in self.files:
+            with open(fn, 'r') as fin:
+                raw_text = fin.read()
+                # see if there are poems by looking for \n\n\n
+                if '\n\n\n' in raw_text:
+                    print('found a book')
+                    the_poems = self.get_poems(fn)
+                    text_objects_of_poems = [Text(fn, poem) for poem in the_poems]
+                    the_texts.extend(text_objects_of_poems)
+                else:
+                    print('found a poem')
+                    the_texts.append(Text(fn))
+        return the_texts
+        # return [Text(fn) for fn in self.files]
+
+    def get_poems(self, text):
+        """given a book file scoop out the poems"""
+        with open(text, 'r') as fin:
+            raw_text = fin.read()
+            poems = raw_text.split('\n\n\n')
+        return poems
+
+# TODO: get metadata
+# TODO: work with that metadata
+# TODO: graph or cluster it
 
 
 def main():
-    filename = 'corpus/test/black_art_clean.txt'
-    our_text = Text(filename)
-    our_text.raw_text
-    # filename = 'corpus/sabotage_clean.txt'
-    # raw_text = get_raw_text(filename)
-    # tokens = tokenize(raw_text)
-    # lower_tokens = lowercase(tokens)
-    # without_punct = no_punctuation(lower_tokens)
-    # without_spaces = no_spaces(without_punct)
-    # fdist1 = frequency1(without_spaces)
-    # print(fdist1)
+    corpus_dir = 'corpus/'
+    the_corpus = Corpus(corpus_dir)
+    print(len(the_corpus.texts))
 
-# use for most positive and negative in the interpreter:
-# import style
-# corpus = style.Corpus('corpus/test')
-# corpus.texts[0].most_negative
-# corpus.texts[0].most_positive
+
+# import vader_sentiment
+# corpus = 'corpus/'
+# the_corpus = vader_sentiment.Corpus(corpus)
+# see how many poems we have
+# len(the_corpus.texts)
+# see the tokens for the sixth poem
+# the_corpus.texts[5].tokens
 
 
 if __name__ == "__main__":
