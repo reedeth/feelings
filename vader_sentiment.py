@@ -16,171 +16,6 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 # TODO: graph or cluster it
 
 
-class Text(object):
-
-        # The reason we have "the_raw_text=False" is to say that, when
-        # making this Text object, the first item we pass it is its
-        # filename, and IF it has a second item, that second item is
-        # its is_a_poem_chunk. But the =False makes it so that if there is
-        # no second item (if nothing is passed), we set the_raw_text equal
-        # to False. Which matters bc we have it this if statement that
-        # helps us distinguish between poems in poem-files and poems
-        # in book-files. We're turning TWO different types of objects
-        # BOTH into Text(objects).
-    def __init__(self, fn, is_a_poem_chunk=False):
-        # attributes live here
-        self.filename = fn
-        if is_a_poem_chunk:
-            # poem_chunks are currently one long string. This .split
-            # makes our poem_chunks into a list of lines that match
-            # the poem's lines. We call this raw_text.
-            self.raw_text = is_a_poem_chunk.split('\n')
-        else:
-            self.raw_text = self.get_raw_text()
-        # stopped here
-        self.tokens = self.tokenize()
-        self.processed_tokens = self.lowercase()
-        self.processed_tokens = self.no_punctuation()
-        self.processed_tokens = self.no_spaces()
-        self.flattened_tokens = self.flatten(self.processed_tokens)
-        self.stringified_text = self.get_stringified_text()
-        self.stringified_sentences = self.get_stringified_sentences()
-        self.sentiments = self.get_sentiment(usetextblob=False)
-        self.sentiment_values = self.get_sentiment_values()
-        self.sentiments_with_lines = self.get_sentiment_with_lines()
-        self.total_sentiment = self.get_total_sentiment()
-        # self.lines_sorted_by_sentiment = self.get_lines_sorted_by_sentiment()
-        # self.get_unsorted_csv_of_text()
-        # self.most_positive = self.most_positive_five()
-        # self.most_negative = self.most_negative_five()\
-        # self.most_positive = self.sentiments_with_lines[-40:]
-        # self.most_negative = self.sentiments_with_lines[:40]
-        # self.graphed = self.graph_sentiment()
-
-    def get_total_sentiment(self):
-        """gives the average sentiment for a poem"""
-        return sum(self.sentiment_values) / len(self.sentiment_values)
-
-    def graph_sentiment(self):
-        plt.plot(self.sentiment_values)
-        plt.ylabel('polarity')
-        plt.xlabel('position in text')
-        plt.title('Sentiment Analysis of ' + self.filename)
-        # plt.save('sentiment_graphs/' + self.filename + '.png')
-        plt.show()
-
-    def get_sentiment_with_lines(self, usetextblob=False):
-        if usetextblob:
-            results = [(line, TextBlob(line).sentiment.polarity)
-                          for line in self.stringified_sentences]
-        else:
-            analyzer = SentimentIntensityAnalyzer()
-            results = []
-            for line in self.stringified_sentences:
-                line_scores = analyzer.polarity_scores(line)
-                results.append((line, line_scores['neg'], line_scores['neu'], line_scores['pos'], line_scores['compound']))
-        return results
-
-    def get_lines_sorted_by_sentiment(self):
-        pass
-        # sorted_lines = self.sentiments_with_lines
-        # sorted_lines.sort(key=lambda x: x[1])
-        # return sorted_lines
-
-    def get_unsorted_csv_of_text(self):
-        if not os.path.exists('corpus/csvs'):
-            os.makedirs('corpus/csvs')
-        with open('corpus/csvs/black_art_csv.csv', 'w') as fout:
-            csvwriter = csv.writer(fout)
-            csvwriter.writerow(['TEXT', 'VALUE', 'Neg', 'Pos', 'Compound'])
-            for text, neg, neu, pos, compound in self.sentiments_with_lines:
-                csvwriter.writerow([text, neg, neu, pos, compound])
-
-    def most_positive_five(self):
-        # go over every line in the text
-        pass
-        # results = self.lines_sorted_by_sentiment[-40:]
-        # for line, val in results:
-        #     print(line)
-        #     print(val)
-        #     print('=====')
-        # return results
-
-    def most_negative_five(self):
-        pass
-        # results = self.lines_sorted_by_sentiment[:40]
-        # for line, val in results:
-        #     print(line)
-        #     print(val)
-        #     print('=====')
-        # return results
-
-    def get_sentiment_values(self):
-        # get all the compound values
-        return [val['compound'] for val in self.sentiments]
-
-    def get_sentiment(self, usetextblob=True):
-        if usetextblob:
-            return [TextBlob(line).sentiment
-                for line in self.stringified_sentences]
-        else:
-            # example output for each sentence -
-            # {'neg': 0.348, 'neu': 0.498, 'pos': 0.154, 'compound': -0.7096}
-            analyzer = SentimentIntensityAnalyzer()
-            return [analyzer.polarity_scores(line) for line in self.stringified_sentences]
-
-    def flatten(self, thing):
-        return [item for sublist in thing for item in sublist]
-
-    def get_stringified_sentences(self):
-        return [' '.join(line) for line in self.processed_tokens]
-
-    def get_stringified_text(self):
-        return ' '.join(self.flattened_tokens)
-
-    def get_raw_text(self):
-        """Given a filename, get the raw text"""
-        with open(self.filename, 'r') as fin:
-            raw_text = fin.readlines()
-        return raw_text
-
-    def tokenize(self):
-        """Given raw text that is a list of lines, produce the tokens"""
-        line_tokens = []
-        for line in self.raw_text:
-            line_tokens.append(nltk.word_tokenize(line))
-        return line_tokens
-
-    def lowercase(self):
-        """Given the tokenized text, lowercase everything"""
-        new_tokens = [[item.lower()
-                      for item in each_token] for each_token in self.tokens]
-        return new_tokens
-
-    def no_punctuation(self):
-        """Given the lowercased text, remove punctuation"""
-        new_text = [[''.join(c for c in s if c not in string.punctuation) for s in y] for y in self.processed_tokens]
-        return new_text
-
-    def no_spaces(self):
-        """Given the text without punctuation, remove empty items from lists"""
-        new_text = [[s for s in x if s] for x in self.processed_tokens]
-        return new_text
-
-    def frequency1(self):
-        """Given the lists without any empty slots,
-            turn the thing into one giant list of
-            words and run a FreqDist on it"""
-        new_text = []
-        for line in self.processed_tokens:
-            for item in line:
-                new_text.append(item)
-        fdist = nltk.FreqDist(new_text)
-        modals = ['can', 'could', 'may', 'might', 'must', 'will']
-        for m in modals:
-            print(m + ':', fdist[m], end=' ')
-
-
 class Corpus(object):
     def __init__(self, corpus_dir):
         self.dir = corpus_dir
@@ -244,6 +79,194 @@ class Corpus(object):
         # split takes a long string and returns a new list
         # seperated by whatever you say to split at.
         return text.split('\n\n\n')
+
+
+class Text(object):
+
+        # The reason we have "the_raw_text=False" is to say that, when
+        # making this Text object, the first item we pass it is its
+        # filename, and IF it has a second item, that second item is
+        # its is_a_poem_chunk. But the =False makes it so that if there is
+        # no second item (if nothing is passed), we set the_raw_text equal
+        # to False. Which matters bc we have it this if statement that
+        # helps us distinguish between poems in poem-files and poems
+        # in book-files. We're turning TWO different types of objects
+        # BOTH into Text(objects).
+    def __init__(self, fn, is_a_poem_chunk=False):
+        # attributes live here
+        self.filename = fn
+        if is_a_poem_chunk:
+            # poem_chunks are currently one long string. This .split
+            # makes our poem_chunks into a list of lines that match
+            # the poem's lines. We call this raw_text.
+            self.raw_text = is_a_poem_chunk.split('\n')
+        else:
+            self.raw_text = self.get_raw_text()
+        self.tokens = self.tokenize()
+        self.processed_tokens = self.preprocess()
+        self.flattened_tokens = self.flatten()
+        self.stringified_text = self.get_stringified_text()
+        self.stringified_sentences = self.get_stringified_sentences()
+        self.sentiments = self.get_sentiment(usetextblob=False)
+        self.sentiment_values = self.get_sentiment_values(usetextblob=False)
+        self.sentiments_with_lines = self.get_sentiment_with_lines(usetextblob=False)
+        self.total_sentiment = self.get_total_sentiment()
+        # self.lines_sorted_by_sentiment = self.get_lines_sorted_by_sentiment()
+        # self.get_unsorted_csv_of_text()
+        # self.most_positive = self.most_positive_five()
+        # self.most_negative = self.most_negative_five()\
+        # self.most_positive = self.sentiments_with_lines[-40:]
+        # self.most_negative = self.sentiments_with_lines[:40]
+        # self.graphed = self.graph_sentiment()
+
+    def get_total_sentiment(self):
+        """gives the average sentiment for a poem"""
+        return sum(self.sentiment_values) / len(self.sentiment_values)
+
+    def graph_sentiment(self):
+        plt.plot(self.sentiment_values)
+        plt.ylabel('polarity')
+        plt.xlabel('position in text')
+        plt.title('Sentiment Analysis of ' + self.filename)
+        # plt.save('sentiment_graphs/' + self.filename + '.png')
+        plt.show()
+
+    def get_sentiment_with_lines(self, usetextblob=True):
+        if usetextblob:
+            # Returns a list with two items: first item is a given line of
+            # poem, second item is that line's sentiment score.
+            results = [(line, TextBlob(line).sentiment.polarity)
+                          for line in self.stringified_sentences]
+        else:
+            # Returns a list of 5 items: line of poem; negative score;
+            # neutral score; postitive score; compound score.
+            analyzer = SentimentIntensityAnalyzer()
+            results = []
+            for line in self.stringified_sentences:
+                line_scores = analyzer.polarity_scores(line)
+                results.append((line, line_scores['neg'], line_scores['neu'], line_scores['pos'], line_scores['compound']))
+        return results
+
+    def get_lines_sorted_by_sentiment(self):
+        pass
+        # sorted_lines = self.sentiments_with_lines
+        # sorted_lines.sort(key=lambda x: x[1])
+        # return sorted_lines
+
+    def get_unsorted_csv_of_text(self):
+        if not os.path.exists('corpus/csvs'):
+            os.makedirs('corpus/csvs')
+        with open('corpus/csvs/black_art_csv.csv', 'w') as fout:
+            csvwriter = csv.writer(fout)
+            csvwriter.writerow(['TEXT', 'VALUE', 'Neg', 'Pos', 'Compound'])
+            for text, neg, neu, pos, compound in self.sentiments_with_lines:
+                csvwriter.writerow([text, neg, neu, pos, compound])
+
+    def most_positive_five(self):
+        # go over every line in the text
+        pass
+        # results = self.lines_sorted_by_sentiment[-40:]
+        # for line, val in results:
+        #     print(line)
+        #     print(val)
+        #     print('=====')
+        # return results
+
+    def most_negative_five(self):
+        pass
+        # results = self.lines_sorted_by_sentiment[:40]
+        # for line, val in results:
+        #     print(line)
+        #     print(val)
+        #     print('=====')
+        # return results
+
+    def get_sentiment_values(self, usetextblob=True):
+        if usetextblob:
+            # self.sentiments is currently a list of TextBlob objects.
+            # What this does is loop over every object and return a list
+            # of float decimals corresponding to the polarity attribute?
+            return [val.polarity for val in self.sentiments]
+        else:
+            # self.sentiments is currently a list of dictionaries. What
+            # this does is to loop over every dictionary and return the
+            # value for the 'compound' key, then make a list of all of
+            # them.
+            return [val['compound'] for val in self.sentiments]
+
+    def get_sentiment(self, usetextblob=True):
+        if usetextblob:
+            # If we've set it above in the Text(obect) to use TextBlob,
+            # this evaluates each line for sentiment. Example output
+            # for each sentence is a list of TextBlob sentiment objects,
+            # each of which has two? attributes (polarity and subjectivity)
+            return [TextBlob(line).sentiment
+                    for line in self.stringified_sentences]
+        else:
+            # If we've set it above in the Text(object) to use Vader,
+            # this evaluates each line for sentiment. The example output
+            # for each sentence is a dictionary with four entries:
+            # {'neg': 0.348, 'neu': 0.498, 'pos': 0.154, 'compound':
+            # -0.7096}
+            analyzer = SentimentIntensityAnalyzer()
+            return [analyzer.polarity_scores(line) for line in self.stringified_sentences]
+
+    def flatten(self):
+        # TextBlob is weird and wants long strings rather than
+        # tokens. So here, we're basically undoing our tokenization
+        # process.
+        return [item for sublist in self.processed_tokens for item in sublist]
+
+    def get_stringified_text(self):
+        # Here we're taking our un-tokenized items and turning our item
+        # into one GIANT string of words. This lets us analyze an entire
+        # poem for one sentiment score.
+        return ' '.join(self.flattened_tokens)
+
+    def get_stringified_sentences(self):
+        # Here we're taking our un-tokenized items and turning them into
+        # a list of lines that match the lines in the poem. This lets us
+        # analyze each line in a poem for sentiment scores.
+        return [' '.join(line) for line in self.processed_tokens]
+
+    def get_raw_text(self):
+        """Given a filename, get the raw text"""
+        with open(self.filename, 'r') as fin:
+            raw_text = fin.readlines()
+        return raw_text
+
+    def tokenize(self):
+        """Given raw text that is a list of lines, produce the tokens"""
+        # If we want it to tokenize things differently, we have to make
+        # our own version of "nltk.word_tokenize()" (i.e., if we want
+        # it to care about punctuation or something)
+        line_tokens = []
+        for line in self.raw_text:
+            line_tokens.append(nltk.word_tokenize(line))
+        return line_tokens
+
+    def preprocess(self):
+        """take a list of tokenized lines and preprocess them by lowercasing, removing punctuation, and then throwing away empty elements"""
+        processed_tokens = [[item.lower() for item in each_token] for
+                            each_token in self.tokens]
+        processed_tokens = [[''.join(c for c in s if c not in
+                            string.punctuation) for s in y] for y in
+                            processed_tokens]
+        processed_tokens = [[s for s in x if s] for x in processed_tokens]
+        return processed_tokens
+
+    def frequency1(self):
+        """Given the lists without any empty slots,
+            turn the thing into one giant list of
+            words and run a FreqDist on it"""
+        new_text = []
+        for line in self.processed_tokens:
+            for item in line:
+                new_text.append(item)
+        fdist = nltk.FreqDist(new_text)
+        modals = ['can', 'could', 'may', 'might', 'must', 'will']
+        for m in modals:
+            print(m + ':', fdist[m], end=' ')
 
 
 def main():
