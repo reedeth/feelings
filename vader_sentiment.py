@@ -40,7 +40,6 @@ class Corpus(object):
                 except IndexError:
                     pass
             train = train[1:]
-    # train = [(row[0], row[1]) for row in poemreader]
 
         cl = NaiveBayesClassifier(train)
         return cl
