@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import os
 import csv
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
+from textblob.classifiers import NaiveBayesClassifier
 
 # TODO: refactor Text.raw_text to be Text.poem_lines. also change
 # Text.get_raw_text()
@@ -22,9 +23,27 @@ class Corpus(object):
 
         # get a list of all the filenames
         self.files = self.manifest()
-
+        self.classifier = self.train_classifier()
         # make texts from all the filenames
         self.texts = self.make_texts()
+
+    def train_classifier(self):
+        with open('corpus/csvs/raw_training_set.csv', 'r') as fin:
+            fin.read
+            poemreader = csv.reader(fin, delimiter=',', quotechar='|')
+            train = []
+            for row in poemreader:
+                print(row)
+                try:
+                    if row[1] in ['pos', 'neg']:
+                        train.append((row[0], row[1]))
+                except IndexError:
+                    pass
+            train = train[1:]
+    # train = [(row[0], row[1]) for row in poemreader]
+
+        cl = NaiveBayesClassifier(train)
+        return cl
 
     def manifest(self):
         """given a corpus directory, make a list of filenames from it"""
@@ -40,7 +59,7 @@ class Corpus(object):
         # "corpus/individual_poems/baraka_black_poems/etc")
         for (root, _, files) in os.walk(self.dir):
             for fn in files:
-                if fn[0] == '.':
+                if fn[0] == '.' or fn[-4:] == '.csv':
                     pass
                 else:
                     texts.append(os.path.join(root, fn))
@@ -80,6 +99,17 @@ class Corpus(object):
         # seperated by whatever you say to split at.
         return text.split('\n\n\n')
 
+    def get_raw_training_csv(self):
+        if not os.path.exists('corpus/csvs'):
+            os.makedirs('corpus/csvs')
+        with open('corpus/csvs/raw_training_set.csv', 'w') as fout:
+            csvwriter = csv.writer(fout)
+            csvwriter.writerow(['TEXT', 'POLARITY'])
+            # a corpus doesn't have stringified_sentences - so we'll need
+            # to loop over every text to get the sentences
+            for text in self.texts:
+                for sent in text.stringified_sentences:
+                    csvwriter.writerow([sent])
 
 class Text(object):
 
@@ -92,7 +122,7 @@ class Text(object):
         # helps us distinguish between poems in poem-files and poems
         # in book-files. We're turning TWO different types of objects
         # BOTH into Text(objects).
-    def __init__(self, fn, is_a_poem_chunk=False):
+    def __init__(self, fn, is_a_poem_chunk=False, trained_classifier=False):
         # attributes live here
         self.filename = fn
         if is_a_poem_chunk:
