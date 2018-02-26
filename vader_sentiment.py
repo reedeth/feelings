@@ -6,35 +6,122 @@ import os
 import csv
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
-
+# TODO: refactor Text.raw_text to be Text.poem_lines. also change
+# Text.get_raw_text()
 # TODO: make your own classifier to be more nuanced
 # TODO: train on our own data
 # TODO: word2vec
+# TODO: get metadata
+# TODO: work with that metadata
+# TODO: graph or cluster it
+
+
+class Corpus(object):
+    def __init__(self, corpus_dir):
+        self.dir = corpus_dir
+
+        # get a list of all the filenames
+        self.files = self.manifest()
+
+        # make texts from all the filenames
+        self.texts = self.make_texts()
+
+    def manifest(self):
+        """given a corpus directory, make a list of filenames from it"""
+        texts = []
+
+        # for each tuple in this list of tuples (bc os.walk makes tuples),
+        # rather than treating it as set of 3, assign new variable names
+        # to each element of tuple. The "_" is a python convention that
+        # lets you kind of throw that variable away. Passing files that
+        # start with "." skips over weird hidden stuff in directories.
+        # os.path.join crawls all our subdirectories to give us not just
+        # names of files, but files with full directories attached (i.e.
+        # "corpus/individual_poems/baraka_black_poems/etc")
+        for (root, _, files) in os.walk(self.dir):
+            for fn in files:
+                if fn[0] == '.':
+                    pass
+                else:
+                    texts.append(os.path.join(root, fn))
+        return texts
+
+    def make_texts(self):
+        the_texts = []
+        for fn in self.files:
+            with open(fn, 'r') as fin:
+
+                # fin.read() reads every filename in self.files as one
+                # giant string.
+                raw_text = fin.read()
+
+                # Looking at that big long string, see if there are
+                # poems by looking for \n\n\n.
+                if '\n\n\n' in raw_text:
+                    print('found a book')
+                    the_poems = self.get_poems(raw_text)
+
+                    # For every poem in the_poems, turn it into a
+                    # Text object, then "extend" our list of giant poems
+                    # aka "the_texts" with all the new poems it finds.
+                    # We use extend and not append to make sure we're not
+                    # making a zillion lists inside our list.
+                    text_objects_of_poems = [Text(fn, poem) for poem in the_poems]
+                    the_texts.extend(text_objects_of_poems)
+                else:
+                    print('found a poem')
+                    the_texts.append(Text(fn))
+        return the_texts
+        # return [Text(fn) for fn in self.files]
+
+    def get_poems(self, text):
+        """given a book file scoop out the poems"""
+        # split takes a long string and returns a new list
+        # seperated by whatever you say to split at.
+        return text.split('\n\n\n')
+
 
 class Text(object):
-    def __init__(self, fn):
+
+        # The reason we have "the_raw_text=False" is to say that, when
+        # making this Text object, the first item we pass it is its
+        # filename, and IF it has a second item, that second item is
+        # its is_a_poem_chunk. But the =False makes it so that if there is
+        # no second item (if nothing is passed), we set the_raw_text equal
+        # to False. Which matters bc we have it this if statement that
+        # helps us distinguish between poems in poem-files and poems
+        # in book-files. We're turning TWO different types of objects
+        # BOTH into Text(objects).
+    def __init__(self, fn, is_a_poem_chunk=False):
         # attributes live here
         self.filename = fn
-        self.raw_text = self.get_raw_text()
+        if is_a_poem_chunk:
+            # poem_chunks are currently one long string. This .split
+            # makes our poem_chunks into a list of lines that match
+            # the poem's lines. We call this raw_text.
+            self.raw_text = is_a_poem_chunk.split('\n')
+        else:
+            self.raw_text = self.get_raw_text()
         self.tokens = self.tokenize()
-        self.processed_tokens = self.lowercase()
-        self.processed_tokens = self.no_punctuation()
-        self.processed_tokens = self.no_spaces()
-        self.flattened_tokens = self.flatten(self.processed_tokens)
+        self.processed_tokens = self.preprocess()
+        self.flattened_tokens = self.flatten()
         self.stringified_text = self.get_stringified_text()
         self.stringified_sentences = self.get_stringified_sentences()
         self.sentiments = self.get_sentiment(usetextblob=False)
-        self.sentiment_values = self.get_sentiment_values()
-        self.sentiments_with_lines = self.get_sentiment_with_lines()
+        self.sentiment_values = self.get_sentiment_values(usetextblob=False)
+        self.sentiments_with_lines = self.get_sentiment_with_lines(usetextblob=False)
+        self.total_sentiment = self.get_total_sentiment()
         # self.lines_sorted_by_sentiment = self.get_lines_sorted_by_sentiment()
-        self.get_unsorted_csv_of_text()
+        # self.get_unsorted_csv_of_text()
         # self.most_positive = self.most_positive_five()
-        # self.most_negative = self.most_negative_five()
-
+        # self.most_negative = self.most_negative_five()\
         # self.most_positive = self.sentiments_with_lines[-40:]
         # self.most_negative = self.sentiments_with_lines[:40]
-
         # self.graphed = self.graph_sentiment()
+
+    def get_total_sentiment(self):
+        """gives the average sentiment for a poem"""
+        return sum(self.sentiment_values) / len(self.sentiment_values)
 
     def graph_sentiment(self):
         plt.plot(self.sentiment_values)
@@ -44,11 +131,15 @@ class Text(object):
         # plt.save('sentiment_graphs/' + self.filename + '.png')
         plt.show()
 
-    def get_sentiment_with_lines(self, usetextblob=False):
+    def get_sentiment_with_lines(self, usetextblob=True):
         if usetextblob:
-            sentiments = [(line, TextBlob(line).sentiment.polarity)
+            # Returns a list with two items: first item is a given line of
+            # poem, second item is that line's sentiment score.
+            results = [(line, TextBlob(line).sentiment.polarity)
                           for line in self.stringified_sentences]
         else:
+            # Returns a list of 5 items: line of poem; negative score;
+            # neutral score; postitive score; compound score.
             analyzer = SentimentIntensityAnalyzer()
             results = []
             for line in self.stringified_sentences:
@@ -90,30 +181,53 @@ class Text(object):
         #     print('=====')
         # return results
 
-    def get_sentiment_values(self):
-        # get all the compound values
-        return [val['compound'] for val in self.sentiments]
+    def get_sentiment_values(self, usetextblob=True):
+        if usetextblob:
+            # self.sentiments is currently a list of TextBlob objects.
+            # What this does is loop over every object and return a list
+            # of float decimals corresponding to the polarity attribute?
+            return [val.polarity for val in self.sentiments]
+        else:
+            # self.sentiments is currently a list of dictionaries. What
+            # this does is to loop over every dictionary and return the
+            # value for the 'compound' key, then make a list of all of
+            # them.
+            return [val['compound'] for val in self.sentiments]
 
     def get_sentiment(self, usetextblob=True):
         if usetextblob:
+            # If we've set it above in the Text(obect) to use TextBlob,
+            # this evaluates each line for sentiment. Example output
+            # for each sentence is a list of TextBlob sentiment objects,
+            # each of which has two? attributes (polarity and subjectivity)
             return [TextBlob(line).sentiment
-                for line in self.stringified_sentences]
+                    for line in self.stringified_sentences]
         else:
-            # example output for each sentence -
-            # {'neg': 0.348, 'neu': 0.498, 'pos': 0.154, 'compound': -0.7096}
+            # If we've set it above in the Text(object) to use Vader,
+            # this evaluates each line for sentiment. The example output
+            # for each sentence is a dictionary with four entries:
+            # {'neg': 0.348, 'neu': 0.498, 'pos': 0.154, 'compound':
+            # -0.7096}
             analyzer = SentimentIntensityAnalyzer()
             return [analyzer.polarity_scores(line) for line in self.stringified_sentences]
 
-
-    # methods live here
-    def flatten(self, thing):
-        return [item for sublist in thing for item in sublist]
-
-    def get_stringified_sentences(self):
-        return [' '.join(line) for line in self.processed_tokens]
+    def flatten(self):
+        # TextBlob is weird and wants long strings rather than
+        # tokens. So here, we're basically undoing our tokenization
+        # process.
+        return [item for sublist in self.processed_tokens for item in sublist]
 
     def get_stringified_text(self):
+        # Here we're taking our un-tokenized items and turning our item
+        # into one GIANT string of words. This lets us analyze an entire
+        # poem for one sentiment score.
         return ' '.join(self.flattened_tokens)
+
+    def get_stringified_sentences(self):
+        # Here we're taking our un-tokenized items and turning them into
+        # a list of lines that match the lines in the poem. This lets us
+        # analyze each line in a poem for sentiment scores.
+        return [' '.join(line) for line in self.processed_tokens]
 
     def get_raw_text(self):
         """Given a filename, get the raw text"""
@@ -123,26 +237,23 @@ class Text(object):
 
     def tokenize(self):
         """Given raw text that is a list of lines, produce the tokens"""
+        # If we want it to tokenize things differently, we have to make
+        # our own version of "nltk.word_tokenize()" (i.e., if we want
+        # it to care about punctuation or something)
         line_tokens = []
         for line in self.raw_text:
             line_tokens.append(nltk.word_tokenize(line))
         return line_tokens
 
-    def lowercase(self):
-        """Given the tokenized text, lowercase everything"""
-        new_tokens = [[item.lower()
-                      for item in each_token] for each_token in self.tokens]
-        return new_tokens
-
-    def no_punctuation(self):
-        """Given the lowercased text, remove punctuation"""
-        new_text = [[''.join(c for c in s if c not in string.punctuation) for s in y] for y in self.processed_tokens]
-        return new_text
-
-    def no_spaces(self):
-        """Given the text without punctuation, remove empty items from lists"""
-        new_text = [[s for s in x if s] for x in self.processed_tokens]
-        return new_text
+    def preprocess(self):
+        """take a list of tokenized lines and preprocess them by lowercasing, removing punctuation, and then throwing away empty elements"""
+        processed_tokens = [[item.lower() for item in each_token] for
+                            each_token in self.tokens]
+        processed_tokens = [[''.join(c for c in s if c not in
+                            string.punctuation) for s in y] for y in
+                            processed_tokens]
+        processed_tokens = [[s for s in x if s] for x in processed_tokens]
+        return processed_tokens
 
     def frequency1(self):
         """Given the lists without any empty slots,
@@ -158,45 +269,19 @@ class Text(object):
             print(m + ':', fdist[m], end=' ')
 
 
-class Corpus(object):
-    def __init__(self, corpus_dir):
-        self.dir = corpus_dir
-        self.files = self.manifest()
-        self.texts = self.make_texts()
-
-    def manifest(self):
-        """given a corpus directory, make indexed text objects from it"""
-        texts = []
-        for (root, _, files) in os.walk(self.dir):
-            for fn in files:
-                if fn[0] == '.':
-                    pass
-                else:
-                    texts.append(os.path.join(root, fn))
-        return texts
-
-    def make_texts(self):
-        return [Text(fn) for fn in self.files]
-
-
 def main():
-    filename = 'corpus/test/black_art_clean.txt'
-    our_text = Text(filename)
-    our_text.raw_text
-    # filename = 'corpus/sabotage_clean.txt'
-    # raw_text = get_raw_text(filename)
-    # tokens = tokenize(raw_text)
-    # lower_tokens = lowercase(tokens)
-    # without_punct = no_punctuation(lower_tokens)
-    # without_spaces = no_spaces(without_punct)
-    # fdist1 = frequency1(without_spaces)
-    # print(fdist1)
+    corpus_dir = 'corpus/'
+    the_corpus = Corpus(corpus_dir)
+    print(len(the_corpus.texts))
 
-# use for most positive and negative in the interpreter:
-# import style
-# corpus = style.Corpus('corpus/test')
-# corpus.texts[0].most_negative
-# corpus.texts[0].most_positive
+# how to run this in the interpreter
+# import vader_sentiment
+# corpus = 'corpus/'
+# the_corpus = vader_sentiment.Corpus(corpus)
+# see how many poems we have
+# len(the_corpus.texts)
+# see the tokens for the sixth poem
+# the_corpus.texts[5].tokens
 
 
 if __name__ == "__main__":
