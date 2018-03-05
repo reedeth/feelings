@@ -15,7 +15,40 @@ from textblob.classifiers import NaiveBayesClassifier
 # TODO: get metadata
 # TODO: work with that metadata
 # TODO: graph or cluster it
+# TODO: rename the file!
 
+
+def feature_extractor(words):
+    """Default feature extractor for the NaiveBayesAnalyzer."""
+    return dict(((word, True) for word in words))
+
+
+def get_rotten_training_data():
+        neg_ids = nltk.corpus.movie_reviews.fileids('neg')
+        pos_ids = nltk.corpus.movie_reviews.fileids('pos')
+        neg_feats = [(feature_extractor(
+        nltk.corpus.movie_reviews.words(fileids=[f])), 'neg') for f in neg_ids]
+        pos_feats = [(feature_extractor(
+        nltk.corpus.movie_reviews.words(fileids=[f])), 'pos') for f in pos_ids]
+        train_data = neg_feats + pos_feats
+        return nltk.classify.NaiveBayesClassifier.train(train_data)
+
+
+def train_classifier():
+    with open('corpus/csvs/raw_training_set.csv', 'r') as fin:
+        fin.read
+        poemreader = csv.reader(fin, delimiter=',', quotechar='|')
+        train = []
+        for row in poemreader:
+            try:
+                if row[1] in ['pos', 'neg']:
+                    train.append((row[0], row[1]))
+            except IndexError:
+                pass
+        train = train[1:]
+
+    cl = NaiveBayesClassifier(train)
+    return cl, train
 
 class Corpus(object):
     def __init__(self, corpus_dir):
@@ -23,7 +56,7 @@ class Corpus(object):
 
         # get a list of all the filenames
         self.files = self.manifest()
-        self.classifier = self.train_classifier()
+        self.classifier, self.training_data = self.train_classifier()
         # make texts from all the filenames
         self.texts = self.make_texts()
 
@@ -33,7 +66,6 @@ class Corpus(object):
             poemreader = csv.reader(fin, delimiter=',', quotechar='|')
             train = []
             for row in poemreader:
-                print(row)
                 try:
                     if row[1] in ['pos', 'neg']:
                         train.append((row[0], row[1]))
@@ -84,11 +116,11 @@ class Corpus(object):
                     # aka "the_texts" with all the new poems it finds.
                     # We use extend and not append to make sure we're not
                     # making a zillion lists inside our list.
-                    text_objects_of_poems = [Text(fn, poem) for poem in the_poems]
+                    text_objects_of_poems = [Text(fn, poem, training_data=self.training_data, trained_classifier=self.trained_classifier) for poem in the_poems]
                     the_texts.extend(text_objects_of_poems)
                 else:
                     print('found a poem')
-                    the_texts.append(Text(fn))
+                    the_texts.append(Text(fn, training_data=self.training_data, trained_classifier=self.trained_classifier))
         return the_texts
         # return [Text(fn) for fn in self.files]
 
@@ -121,9 +153,11 @@ class Text(object):
         # helps us distinguish between poems in poem-files and poems
         # in book-files. We're turning TWO different types of objects
         # BOTH into Text(objects).
-    def __init__(self, fn, is_a_poem_chunk=False, trained_classifier=False):
+    def __init__(self, fn, training_data, trained_classifier, is_a_poem_chunk=False):
         # attributes live here
         self.filename = fn
+        self.training_data = training_data
+        self.trained_classifier = trained_classifier
         if is_a_poem_chunk:
             # poem_chunks are currently one long string. This .split
             # makes our poem_chunks into a list of lines that match
@@ -136,9 +170,9 @@ class Text(object):
         self.flattened_tokens = self.flatten()
         self.stringified_text = self.get_stringified_text()
         self.stringified_sentences = self.get_stringified_sentences()
-        self.sentiments = self.get_sentiment(usetextblob=False)
-        self.sentiment_values = self.get_sentiment_values(usetextblob=False)
-        self.sentiments_with_lines = self.get_sentiment_with_lines(usetextblob=False)
+        self.sentiments = self.get_sentiment(usetextblob=False, usetrained=False)
+        self.sentiment_values = self.get_sentiment_values(usetextblob=False, usetrained=False)
+        self.sentiments_with_lines = self.get_sentiment_with_lines(usetextblob=False, usetrained=False)
         self.total_sentiment = self.get_total_sentiment()
         # self.lines_sorted_by_sentiment = self.get_lines_sorted_by_sentiment()
         # self.get_unsorted_csv_of_text()
@@ -160,12 +194,20 @@ class Text(object):
         # plt.save('sentiment_graphs/' + self.filename + '.png')
         plt.show()
 
-    def get_sentiment_with_lines(self, usetextblob=True):
+    def get_sentiment_with_lines(self, usetextblob=True, usetrained=True):
         if usetextblob:
-            # Returns a list with two items: first item is a given line of
-            # poem, second item is that line's sentiment score.
-            results = [(line, TextBlob(line).sentiment.polarity)
-                          for line in self.stringified_sentences]
+            if usetrained:
+                # Returns a list with two items: first item is a given line of
+                # poem, second item is that line's sentiment score.
+                results = []
+                for line in self.stringified_sentences:
+                    tb = TextBlob(line).update(self.training_data)
+                    results.append((line, tb.sentiment.polarity))
+            else:
+                # Returns a list with two items: first item is a given line of
+                # poem, second item is that line's sentiment score.
+                results = [(line, TextBlob(line).sentiment.polarity)
+                              for line in self.stringified_sentences]
         else:
             # Returns a list of 5 items: line of poem; negative score;
             # neutral score; postitive score; compound score.
@@ -210,7 +252,7 @@ class Text(object):
         #     print('=====')
         # return results
 
-    def get_sentiment_values(self, usetextblob=True):
+    def get_sentiment_values(self, usetextblob=True, usetrained=True):
         if usetextblob:
             # self.sentiments is currently a list of TextBlob objects.
             # What this does is loop over every object and return a list
@@ -223,7 +265,7 @@ class Text(object):
             # them.
             return [val['compound'] for val in self.sentiments]
 
-    def get_sentiment(self, usetextblob=True):
+    def get_sentiment(self, usetextblob=True, usetrained=True):
         if usetextblob:
             # If we've set it above in the Text(obect) to use TextBlob,
             # this evaluates each line for sentiment. Example output
