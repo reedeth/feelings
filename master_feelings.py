@@ -377,12 +377,19 @@ def main():
 # how to run this in the interpreter
 # import master_feelings
 # args = master_feelings.parse_args()
+# you can set the args in the interpreter like so -
+# args.usetrainingdata = 'True'
 # corpus = 'corpus/'
 # the_corpus = master_feelings.Corpus(corpus, args)
 # see how many poems we have
 # len(the_corpus.texts)
 # see the tokens for the sixth poem
 # the_corpus.texts[5].tokens
+
+# to run from command line would be
+# python3 master_feelings.py --usevadar True
+# or
+# python3 master_feelings.py --usetextblob True --usetrainingdata True
 
 
 if __name__ == "__main__":
