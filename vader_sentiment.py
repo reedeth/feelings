@@ -6,6 +6,8 @@ import os
 import csv
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from textblob.classifiers import NaiveBayesClassifier
+import sys
+import argparse
 
 # TODO: refactor Text.raw_text to be Text.poem_lines. also change
 # Text.get_raw_text()
@@ -18,24 +20,27 @@ from textblob.classifiers import NaiveBayesClassifier
 # TODO: rename the file!
 
 
-def feature_extractor(words):
-    """Default feature extractor for the NaiveBayesAnalyzer."""
-    return dict(((word, True) for word in words))
-
-
-def get_rotten_training_data():
-        neg_ids = nltk.corpus.movie_reviews.fileids('neg')
-        pos_ids = nltk.corpus.movie_reviews.fileids('pos')
-        neg_feats = [(feature_extractor(
-        nltk.corpus.movie_reviews.words(fileids=[f])), 'neg') for f in neg_ids]
-        pos_feats = [(feature_extractor(
-        nltk.corpus.movie_reviews.words(fileids=[f])), 'pos') for f in pos_ids]
-        train_data = neg_feats + pos_feats
-        return nltk.classify.NaiveBayesClassifier.train(train_data)
+# def feature_extractor(words):
+# experimental - not implemented
+#     """Default feature extractor for the NaiveBayesAnalyzer."""
+#     return dict(((word, True) for word in words))
+#
+#
+# def get_rotten_training_data():
+# experimental - not implemented
+#         neg_ids = nltk.corpus.movie_reviews.fileids('neg')
+#         pos_ids = nltk.corpus.movie_reviews.fileids('pos')
+#         neg_feats = [(feature_extractor(
+#         nltk.corpus.movie_reviews.words(fileids=[f])), 'neg') for f in neg_ids]
+#         pos_feats = [(feature_extractor(
+#         nltk.corpus.movie_reviews.words(fileids=[f])), 'pos') for f in pos_ids]
+#         train_data = neg_feats + pos_feats
+#         return nltk.classify.NaiveBayesClassifier.train(train_data)
 
 
 def train_classifier():
     with open('corpus/csvs/raw_training_set.csv', 'r') as fin:
+        print('training')
         fin.read
         poemreader = csv.reader(fin, delimiter=',', quotechar='|')
         train = []
@@ -51,17 +56,19 @@ def train_classifier():
     return cl, train
 
 class Corpus(object):
-    def __init__(self, corpus_dir):
+    def __init__(self, corpus_dir, args):
+        self.args = args
         self.dir = corpus_dir
 
         # get a list of all the filenames
         self.files = self.manifest()
-        self.classifier, self.training_data = self.train_classifier()
+        self.trained_classifier, self.training_data = self.train_classifier()
         # make texts from all the filenames
         self.texts = self.make_texts()
 
     def train_classifier(self):
         with open('corpus/csvs/raw_training_set.csv', 'r') as fin:
+            print('training')
             fin.read
             poemreader = csv.reader(fin, delimiter=',', quotechar='|')
             train = []
@@ -74,7 +81,7 @@ class Corpus(object):
             train = train[1:]
 
         cl = NaiveBayesClassifier(train)
-        return cl
+        return cl, train
 
     def manifest(self):
         """given a corpus directory, make a list of filenames from it"""
@@ -116,11 +123,11 @@ class Corpus(object):
                     # aka "the_texts" with all the new poems it finds.
                     # We use extend and not append to make sure we're not
                     # making a zillion lists inside our list.
-                    text_objects_of_poems = [Text(fn, poem, training_data=self.training_data, trained_classifier=self.trained_classifier) for poem in the_poems]
+                    text_objects_of_poems = [Text(fn=fn, is_a_poem_chunk=poem, training_data=self.training_data, trained_classifier=self.trained_classifier, args=self.args) for poem in the_poems]
                     the_texts.extend(text_objects_of_poems)
                 else:
                     print('found a poem')
-                    the_texts.append(Text(fn, training_data=self.training_data, trained_classifier=self.trained_classifier))
+                    the_texts.append(Text(fn=fn, training_data=self.training_data, trained_classifier=self.trained_classifier, args=self.args))
         return the_texts
         # return [Text(fn) for fn in self.files]
 
@@ -153,7 +160,7 @@ class Text(object):
         # helps us distinguish between poems in poem-files and poems
         # in book-files. We're turning TWO different types of objects
         # BOTH into Text(objects).
-    def __init__(self, fn, training_data, trained_classifier, is_a_poem_chunk=False):
+    def __init__(self, fn, training_data, trained_classifier, args, is_a_poem_chunk=False):
         # attributes live here
         self.filename = fn
         self.training_data = training_data
@@ -170,9 +177,9 @@ class Text(object):
         self.flattened_tokens = self.flatten()
         self.stringified_text = self.get_stringified_text()
         self.stringified_sentences = self.get_stringified_sentences()
-        self.sentiments = self.get_sentiment(usetextblob=False, usetrained=False)
-        self.sentiment_values = self.get_sentiment_values(usetextblob=False, usetrained=False)
-        self.sentiments_with_lines = self.get_sentiment_with_lines(usetextblob=False, usetrained=False)
+        self.sentiments = self.get_sentiment(usetextblob=args.usetextblob, usetrained=args.usetrainingdata, usevadar=args.usevadar)
+        self.sentiment_values = self.get_sentiment_values(usetextblob=args.usetextblob, usetrained=args.usetrainingdata, usevadar=args.usevadar)
+        self.sentiments_with_lines = self.get_sentiment_with_lines(usetextblob=args.usetextblob, usetrained=args.usetrainingdata, usevadar=args.usevadar)
         self.total_sentiment = self.get_total_sentiment()
         # self.lines_sorted_by_sentiment = self.get_lines_sorted_by_sentiment()
         # self.get_unsorted_csv_of_text()
@@ -194,21 +201,21 @@ class Text(object):
         # plt.save('sentiment_graphs/' + self.filename + '.png')
         plt.show()
 
-    def get_sentiment_with_lines(self, usetextblob=True, usetrained=True):
+    def get_sentiment_with_lines(self, usetextblob=True, usetrained=True, usevadar=False):
         if usetextblob:
             if usetrained:
                 # Returns a list with two items: first item is a given line of
                 # poem, second item is that line's sentiment score.
                 results = []
                 for line in self.stringified_sentences:
-                    tb = TextBlob(line).update(self.training_data)
+                    tb = TextBlob(line, classifier=self.trained_classifier)
                     results.append((line, tb.sentiment.polarity))
             else:
                 # Returns a list with two items: first item is a given line of
                 # poem, second item is that line's sentiment score.
                 results = [(line, TextBlob(line).sentiment.polarity)
                               for line in self.stringified_sentences]
-        else:
+        elif usevadar:
             # Returns a list of 5 items: line of poem; negative score;
             # neutral score; postitive score; compound score.
             analyzer = SentimentIntensityAnalyzer()
@@ -252,34 +259,34 @@ class Text(object):
         #     print('=====')
         # return results
 
-    def get_sentiment_values(self, usetextblob=True, usetrained=True):
+    def get_sentiment_values(self, usetextblob=True, usetrained=True, usevadar=False):
         if usetextblob:
             # self.sentiments is currently a list of TextBlob objects.
             # What this does is loop over every object and return a list
             # of float decimals corresponding to the polarity attribute?
             return [val.polarity for val in self.sentiments]
-        else:
+        elif usevadar:
             # self.sentiments is currently a list of dictionaries. What
             # this does is to loop over every dictionary and return the
             # value for the 'compound' key, then make a list of all of
             # them.
             return [val['compound'] for val in self.sentiments]
 
-    def get_sentiment(self, usetextblob=True, usetrained=True):
+    def get_sentiment(self, usetextblob=True, usetrained=True, usevadar=False):
         if usetextblob:
             if usetrained:
                 # Returns a list with two items: first item is a given line of
                 # poem, second item is that line's sentiment score.
                 results = []
                 for line in self.stringified_sentences:
-                    tb = TextBlob(line).update(self.training_data)
+                    tb = TextBlob(line, classifier=self.trained_classifier)
                     results.append(tb.sentiment)
             # If we've set it above in the Text(obect) to use TextBlob,
             # this evaluates each line for sentiment. Example output
             # for each sentence is a list of TextBlob sentiment objects,
             # each of which has two? attributes (polarity and subjectivity)
             return results
-        else:
+        elif usevadar:
             # If we've set it above in the Text(object) to use Vader,
             # this evaluates each line for sentiment. The example output
             # for each sentence is a dictionary with four entries:
@@ -346,15 +353,32 @@ class Text(object):
             print(m + ':', fdist[m], end=' ')
 
 
+def parse_args(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    parser = argparse.ArgumentParser(description=__doc__)
+
+    parser.add_argument('-tb', '--textblob', dest='usetextblob',
+                        action='store',
+                        help='Specify to use Textblob.', default='False')
+    parser.add_argument('-td', '--trainingdata', dest='usetrainingdata',
+                        action='store',
+                    help='Specify to use training data of our own.', default='False')
+    parser.add_argument('-v', '--vadar', dest='usevadar',
+                        help='Specify True to use vadar', default='True')
+
+    return parser.parse_args(argv)
+
 def main():
+    args = parse_args()
     corpus_dir = 'corpus/'
-    the_corpus = Corpus(corpus_dir)
+    the_corpus = Corpus(corpus_dir, args)
     print(len(the_corpus.texts))
 
 # how to run this in the interpreter
 # import vader_sentiment
+# args = vader_sentiment.parse_args()
 # corpus = 'corpus/'
-# the_corpus = vader_sentiment.Corpus(corpus)
+# the_corpus = vader_sentiment.Corpus(corpus, args)
 # see how many poems we have
 # len(the_corpus.texts)
 # see the tokens for the sixth poem
