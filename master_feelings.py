@@ -177,9 +177,9 @@ class Text(object):
         self.flattened_tokens = self.flatten()
         self.stringified_text = self.get_stringified_text()
         self.stringified_sentences = self.get_stringified_sentences()
-        self.sentiments = self.get_sentiment(usetextblob=args.usetextblob, usetrained=args.usetrainingdata, usevadar=args.usevadar)
-        self.sentiment_values = self.get_sentiment_values(usetextblob=args.usetextblob, usetrained=args.usetrainingdata, usevadar=args.usevadar)
-        self.sentiments_with_lines = self.get_sentiment_with_lines(usetextblob=args.usetextblob, usetrained=args.usetrainingdata, usevadar=args.usevadar)
+        self.sentiments = self.get_sentiment(usetextblob=args.usetextblob, usetrained=args.usetrainingdata, usevader=args.usevader)
+        self.sentiment_values = self.get_sentiment_values(usetextblob=args.usetextblob, usetrained=args.usetrainingdata, usevader=args.usevader)
+        self.sentiments_with_lines = self.get_sentiment_with_lines(usetextblob=args.usetextblob, usetrained=args.usetrainingdata, usevader=args.usevader)
         self.total_sentiment = self.get_total_sentiment()
         # self.lines_sorted_by_sentiment = self.get_lines_sorted_by_sentiment()
         # self.get_unsorted_csv_of_text()
@@ -201,9 +201,11 @@ class Text(object):
         # plt.save('sentiment_graphs/' + self.filename + '.png')
         plt.show()
 
-    def get_sentiment_with_lines(self, usetextblob=True, usetrained=True, usevadar=False):
-        if usetextblob:
-            if usetrained:
+    def get_sentiment_with_lines(self, usetextblob, usetrained, usevader):
+        if usetextblob == 'True':
+            if usetrained == 'True':
+                print('using textblob')
+                print('using trained!')
                 # Returns a list with two items: first item is a given line of
                 # poem, second item is that line's sentiment score.
                 results = []
@@ -215,7 +217,8 @@ class Text(object):
                 # poem, second item is that line's sentiment score.
                 results = [(line, TextBlob(line).sentiment.polarity)
                               for line in self.stringified_sentences]
-        elif usevadar:
+        elif usevader == 'True':
+            print('using vader')
             # Returns a list of 5 items: line of poem; negative score;
             # neutral score; postitive score; compound score.
             analyzer = SentimentIntensityAnalyzer()
@@ -259,22 +262,26 @@ class Text(object):
         #     print('=====')
         # return results
 
-    def get_sentiment_values(self, usetextblob=True, usetrained=True, usevadar=False):
-        if usetextblob:
+    def get_sentiment_values(self, usetextblob, usetrained, usevader):
+        if usetextblob == 'True':
+            print('using textblob')
             # self.sentiments is currently a list of TextBlob objects.
             # What this does is loop over every object and return a list
             # of float decimals corresponding to the polarity attribute?
             return [val.polarity for val in self.sentiments]
-        elif usevadar:
+        elif usevader == 'True':
+            print('using vader')
             # self.sentiments is currently a list of dictionaries. What
             # this does is to loop over every dictionary and return the
             # value for the 'compound' key, then make a list of all of
             # them.
             return [val['compound'] for val in self.sentiments]
 
-    def get_sentiment(self, usetextblob=True, usetrained=True, usevadar=False):
-        if usetextblob:
-            if usetrained:
+    def get_sentiment(self, usetextblob, usetrained, usevader):
+        if usetextblob == 'True':
+            if usetrained == 'True':
+                print('using textblob')
+                print('using trained!')
                 # Returns a list with two items: first item is a given line of
                 # poem, second item is that line's sentiment score.
                 results = []
@@ -286,7 +293,8 @@ class Text(object):
             # for each sentence is a list of TextBlob sentiment objects,
             # each of which has two? attributes (polarity and subjectivity)
             return results
-        elif usevadar:
+        elif usevader == 'True':
+            print('using vader')
             # If we've set it above in the Text(object) to use Vader,
             # this evaluates each line for sentiment. The example output
             # for each sentence is a dictionary with four entries:
@@ -359,12 +367,12 @@ def parse_args(argv=None):
 
     parser.add_argument('-tb', '--textblob', dest='usetextblob',
                         action='store',
-                        help='Specify to use Textblob.', default='False')
+                        help='Specify to use Textblob.', default='True')
     parser.add_argument('-td', '--trainingdata', dest='usetrainingdata',
                         action='store',
-                    help='Specify to use training data of our own.', default='False')
-    parser.add_argument('-v', '--vadar', dest='usevadar',
-                        help='Specify True to use vadar', default='True')
+                    help='Specify to use training data of our own.', default='True')
+    parser.add_argument('-v', '--vader', dest='usevader',
+                        help='Specify True to use vader', default='False')
 
     return parser.parse_args(argv)
 
@@ -377,7 +385,7 @@ def main():
 # how to run this in the interpreter
 # import master_feelings
 # args = master_feelings.parse_args()
-# you can set the args in the interpreter like so -
+# you can set the args in the interpreter like so (can also change the defaults in the parse_args function above)-
 # args.usetrainingdata = 'True'
 # corpus = 'corpus/'
 # the_corpus = master_feelings.Corpus(corpus, args)
@@ -387,7 +395,7 @@ def main():
 # the_corpus.texts[5].tokens
 
 # to run from command line would be
-# python3 master_feelings.py --usevadar True
+# python3 master_feelings.py --usevader True
 # or
 # python3 master_feelings.py --usetextblob True --usetrainingdata True
 
