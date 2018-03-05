@@ -267,12 +267,18 @@ class Text(object):
 
     def get_sentiment(self, usetextblob=True, usetrained=True):
         if usetextblob:
+            if usetrained:
+                # Returns a list with two items: first item is a given line of
+                # poem, second item is that line's sentiment score.
+                results = []
+                for line in self.stringified_sentences:
+                    tb = TextBlob(line).update(self.training_data)
+                    results.append(tb.sentiment)
             # If we've set it above in the Text(obect) to use TextBlob,
             # this evaluates each line for sentiment. Example output
             # for each sentence is a list of TextBlob sentiment objects,
             # each of which has two? attributes (polarity and subjectivity)
-            return [TextBlob(line).sentiment
-                    for line in self.stringified_sentences]
+            return results
         else:
             # If we've set it above in the Text(object) to use Vader,
             # this evaluates each line for sentiment. The example output
