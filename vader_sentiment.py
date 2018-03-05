@@ -23,7 +23,7 @@ class Corpus(object):
 
         # get a list of all the filenames
         self.files = self.manifest()
-        self.classifier = self.train_classifier()
+        # self.classifier = self.train_classifier()
         # make texts from all the filenames
         self.texts = self.make_texts()
 
@@ -40,7 +40,6 @@ class Corpus(object):
                 except IndexError:
                     pass
             train = train[1:]
-    # train = [(row[0], row[1]) for row in poemreader]
 
         cl = NaiveBayesClassifier(train)
         return cl
