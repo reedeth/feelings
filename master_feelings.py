@@ -68,7 +68,7 @@ class Corpus(object):
         self.texts = self.make_texts()
         self.authors = [text.author for text in self.texts]
         self.book_titles = [text.title for text in self.texts]
-    
+
 
     def train_classifier(self):
         with open('corpus/csvs/raw_training_set.csv', 'r') as fin:
@@ -167,7 +167,7 @@ class Text(object):
     def __init__(self, fn, training_data, trained_classifier, args, is_a_poem_chunk=False):
         # attributes live here
         self.filename = fn
-        # self.book_title, self.author = self.parse_filepath(is_a_poem_chunk)
+        self.book_title, self.author = self.parse_filepath(is_a_poem_chunk)
         self.training_data = training_data
         self.trained_classifier = trained_classifier
         if is_a_poem_chunk:
@@ -199,15 +199,21 @@ class Text(object):
         if is_a_poem_chunk:
             # it must be a poem, so get the book and author name from the directory one level up.
             # will be of the form - 'corpus/all_books/individual_poems/baraka-black_poems/……'
-            short_path = os.path.dirname(self.filename)[0]
-            base = os.path.basename(short_path)
-            author, title = base.split('-')
-        else:
-            # the book name and title will be in the filename
-            # will be of the form -  'corpus/all_books/brooks_in_the_mecca.txt'
             base = os.path.basename(self.filename)
             base_no_ext = os.path.splitext(base)[0]
             results = base_no_ext.split('-')
+            author = results[0]
+            title = results[1]
+            return author, title
+        else:
+            # the book name and title will be in the filename
+            # will be of the form -  'corpus/all_books/brooks_in_the_mecca.txt'
+            short_path = os.path.dirname(self.filename)[0]
+            base = os.path.basename(short_path)
+            print(self.filename)
+            print(base)
+            results = base.split('-')
+            print(results)
             author = results[0]
             title = results[1]
             return author, title
