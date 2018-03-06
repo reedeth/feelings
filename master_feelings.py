@@ -8,6 +8,7 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from textblob.classifiers import NaiveBayesClassifier
 import sys
 import argparse
+import re
 
 # TODO: refactor Text.raw_text to be Text.poem_lines. also change
 # Text.get_raw_text()
@@ -65,6 +66,9 @@ class Corpus(object):
         self.trained_classifier, self.training_data = self.train_classifier()
         # make texts from all the filenames
         self.texts = self.make_texts()
+        self.authors = [text.author for text in self.texts]
+        self.book_titles = [text.title for text in self.texts]
+    
 
     def train_classifier(self):
         with open('corpus/csvs/raw_training_set.csv', 'r') as fin:
@@ -163,6 +167,7 @@ class Text(object):
     def __init__(self, fn, training_data, trained_classifier, args, is_a_poem_chunk=False):
         # attributes live here
         self.filename = fn
+        # self.book_title, self.author = self.parse_filepath(is_a_poem_chunk)
         self.training_data = training_data
         self.trained_classifier = trained_classifier
         if is_a_poem_chunk:
@@ -177,6 +182,7 @@ class Text(object):
         self.flattened_tokens = self.flatten()
         self.stringified_text = self.get_stringified_text()
         self.stringified_sentences = self.get_stringified_sentences()
+        self.first_line = self.stringified_sentences[0]
         self.sentiments = self.get_sentiment(usetextblob=args.usetextblob, usetrained=args.usetrainingdata, usevader=args.usevader)
         self.sentiment_values = self.get_sentiment_values(usetextblob=args.usetextblob, usetrained=args.usetrainingdata, usevader=args.usevader)
         self.sentiments_with_lines = self.get_sentiment_with_lines(usetextblob=args.usetextblob, usetrained=args.usetrainingdata, usevader=args.usevader)
@@ -188,6 +194,23 @@ class Text(object):
         # self.most_positive = self.sentiments_with_lines[-40:]
         # self.most_negative = self.sentiments_with_lines[:40]
         # self.graphed = self.graph_sentiment()
+
+    def parse_filepath(self, is_a_poem_chunk):
+        if is_a_poem_chunk:
+            # it must be a poem, so get the book and author name from the directory one level up.
+            # will be of the form - 'corpus/all_books/individual_poems/baraka-black_poems/……'
+            short_path = os.path.dirname(self.filename)[0]
+            base = os.path.basename(short_path)
+            author, title = base.split('-')
+        else:
+            # the book name and title will be in the filename
+            # will be of the form -  'corpus/all_books/brooks_in_the_mecca.txt'
+            base = os.path.basename(self.filename)
+            base_no_ext = os.path.splitext(base)[0]
+            results = base_no_ext.split('-')
+            author = results[0]
+            title = results[1]
+            return author, title
 
     def get_total_sentiment(self):
         """gives the average sentiment for a poem"""
@@ -364,6 +387,8 @@ class Text(object):
 def parse_args(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     parser = argparse.ArgumentParser(description=__doc__)
+
+    # Formatted: 'abbreviation', 'actual arg', 'variable it's stored in'
 
     parser.add_argument('-tb', '--textblob', dest='usetextblob',
                         action='store',
