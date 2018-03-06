@@ -84,7 +84,7 @@ class Corpus(object):
     def get_average_sentiment_with_lines(self):
         return [(text.first_line, text.average_sentiment) for text in self.texts]
 
-    def most_postive_poems_in_book(self, title_query):
+    def most_positive_poems_in_book(self, title_query):
         sub_corpus = [text for text in self.texts if text.book_title == title_query]
         sorted_poems = [(text.first_line, text.average_sentiment) for text in sub_corpus]
         sorted_poems.sort(key=lambda x: x[1])
@@ -439,7 +439,7 @@ def main():
     args = parse_args()
     corpus_dir = 'corpus/'
     the_corpus = Corpus(corpus_dir, args)
-    print(len(the_corpus.texts))
+    print(the_corpus.most_positive_poems_in_book('embryo'))
 
 # how to run this in the interpreter
 # import master_feelings
