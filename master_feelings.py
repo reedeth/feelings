@@ -10,16 +10,10 @@ import sys
 import argparse
 import re
 
-# TODO: refactor Text.raw_text to be Text.poem_lines. also change
-# Text.get_raw_text()
-# TODO: make your own classifier to be more nuanced
-# TODO: train on our own data
+# TODO: train on our own data - shane is working on this.
 # TODO: word2vec
-# TODO: get metadata
-# TODO: work with that metadata
 # TODO: graph or cluster it
-# TODO: rename the file!
-
+# TODO: first
 
 # def feature_extractor(words):
 # experimental - not implemented
@@ -68,7 +62,72 @@ class Corpus(object):
         self.texts = self.make_texts()
         self.authors = list(set([text.author for text in self.texts]))
         self.book_titles = list(set([text.book_title for text in self.texts]))
+        self.average_sentiments = self.get_average_sentiment_with_lines()
+        self.author_sentiments = self.get_author_averages()
+        self.book_sentiments = self.get_book_averages()
+        self.most_positive_poems_in_corpus = self.get_most_positive_poems_in_corpus()
+        self.most_negative_poems_in_corpus = self.get_most_negative_poems_in_corpus()
 
+# wants the top five pos and neg poems in an individual books
+# get a poem based on first line
+
+    def get_most_positive_poems_in_corpus(self):
+        sorted_poems = self.average_sentiments
+        sorted_poems.sort(key=lambda x: x[1])
+        return sorted_poems[-4:]
+
+    def get_most_negative_poems_in_corpus(self):
+        sorted_poems = self.average_sentiments
+        sorted_poems.sort(key=lambda x: x[1])
+        return sorted_poems[:4]
+
+    def get_average_sentiment_with_lines(self):
+        return [(text.first_line, text.average_sentiment) for text in self.texts]
+
+    def most_postive_poems_in_book(self, title_query):
+        sub_corpus = [text for text in self.texts if text.book_title == title_query]
+        sorted_poems = [(text.first_line, text.average_sentiment) for text in sub_corpus]
+        sorted_poems.sort(key=lambda x: x[1])
+        return sorted_poems[-4:]
+
+    def most_negative_poems_in_book(self, title_query):
+        sub_corpus = [text for text in self.texts if text.book_title == title_query]
+        sorted_poems = [(text.first_line, text.average_sentiment) for text in sub_corpus]
+        sorted_poems.sort(key=lambda x: x[1])
+        return sorted_poems[:4]
+
+    def get_poem_averages_given_book(self, title_query):
+        return [(text.first_line, text.average_sentiment) for text in self.texts if text.book_title == title_query]
+
+    def get_author_averages(self):
+        results = {}
+        for author in self.authors:
+            results[author] = self.average_sentiment_for_subcorpus(self.author_query(author))
+        return results
+
+    def get_book_averages(self):
+        results = {}
+        for title in self.book_titles:
+            results[title] = self.average_sentiment_for_subcorpus(self.title_query(title))
+        return results
+
+    def average_sentiment_for_subcorpus(self, sub_corpus):
+        sentiment_readings = [text.average_sentiment for text in sub_corpus]
+        return sum(sentiment_readings) / len(sentiment_readings)
+
+    def author_query(self, query):
+        return [text for text in self.texts if text.author == query]
+
+    def title_query(self, query):
+        return [text for text in
+                self.texts if text.book_title == query]
+
+    def first_line_query(self, query):
+        for text in self.texts:
+            if text.first_line == query:
+                return text
+        # return [text for text in
+        #         self.texts if text.first_line == query]
 
     def train_classifier(self):
         with open('corpus/csvs/raw_training_set.csv', 'r') as fin:
@@ -110,6 +169,7 @@ class Corpus(object):
     def make_texts(self):
         the_texts = []
         for fn in self.files:
+            print(fn)
             with open(fn, 'r') as fin:
 
                 # fin.read() reads every filename in self.files as one
@@ -118,20 +178,16 @@ class Corpus(object):
 
                 # Looking at that big long string, see if there are
                 # poems by looking for \n\n\n.
-                if '\n\n\n' in raw_text:
-                    print('found a book')
-                    the_poems = self.get_poems(raw_text)
-
-                    # For every poem in the_poems, turn it into a
-                    # Text object, then "extend" our list of giant poems
-                    # aka "the_texts" with all the new poems it finds.
-                    # We use extend and not append to make sure we're not
-                    # making a zillion lists inside our list.
-                    text_objects_of_poems = [Text(fn=fn, is_a_poem_chunk=poem, training_data=self.training_data, trained_classifier=self.trained_classifier, args=self.args) for poem in the_poems]
-                    the_texts.extend(text_objects_of_poems)
-                else:
-                    print('found a poem')
-                    the_texts.append(Text(fn=fn, training_data=self.training_data, trained_classifier=self.trained_classifier, args=self.args))
+                print('found a book')
+                the_poems = self.get_poems(raw_text)
+                # For every poem in the_poems, turn it into a
+                # Text object, then "extend" our list of giant poems
+                # aka "the_texts" with all the new poems it finds.
+                # We use extend and not append to make sure we're not
+                # making a zillion lists inside our list.
+                author, title = self.parse_filepath(fn)
+                text_objects_of_poems = [Text(fn=fn, poem_text=poem, book_title=title, author=author, training_data=self.training_data, trained_classifier=self.trained_classifier, args=self.args) for poem in the_poems]
+                the_texts.extend(text_objects_of_poems)
         return the_texts
         # return [Text(fn) for fn in self.files]
 
@@ -153,6 +209,14 @@ class Corpus(object):
                 for sent in text.stringified_sentences:
                     csvwriter.writerow([sent])
 
+    def parse_filepath(self, filename):
+        base = os.path.basename(filename)
+        base_no_ext = os.path.splitext(base)[0]
+        results = base_no_ext.split('-')
+        author = results[0]
+        title = results[1]
+        return author, title
+
 class Text(object):
 
         # The reason we have "the_raw_text=False" is to say that, when
@@ -164,19 +228,14 @@ class Text(object):
         # helps us distinguish between poems in poem-files and poems
         # in book-files. We're turning TWO different types of objects
         # BOTH into Text(objects).
-    def __init__(self, fn, training_data, trained_classifier, args, is_a_poem_chunk=False):
+    def __init__(self, fn, poem_text, book_title, author, training_data, trained_classifier, args):
         # attributes live here
         self.filename = fn
-        self.author, self.book_title = self.parse_filepath(is_a_poem_chunk)
+        self.book_title = book_title
+        self.author = author
         self.training_data = training_data
         self.trained_classifier = trained_classifier
-        if is_a_poem_chunk:
-            # poem_chunks are currently one long string. This .split
-            # makes our poem_chunks into a list of lines that match
-            # the poem's lines. We call this raw_text.
-            self.raw_text = is_a_poem_chunk.split('\n')
-        else:
-            self.raw_text = self.get_raw_text()
+        self.raw_text = poem_text.split('\n')
         self.tokens = self.tokenize()
         self.processed_tokens = self.preprocess()
         self.flattened_tokens = self.flatten()
@@ -186,7 +245,7 @@ class Text(object):
         self.sentiments = self.get_sentiment(usetextblob=args.usetextblob, usetrained=args.usetrainingdata, usevader=args.usevader)
         self.sentiment_values = self.get_sentiment_values(usetextblob=args.usetextblob, usetrained=args.usetrainingdata, usevader=args.usevader)
         self.sentiments_with_lines = self.get_sentiment_with_lines(usetextblob=args.usetextblob, usetrained=args.usetrainingdata, usevader=args.usevader)
-        self.total_sentiment = self.get_total_sentiment()
+        self.average_sentiment = self.get_average_sentiment()
         # self.lines_sorted_by_sentiment = self.get_lines_sorted_by_sentiment()
         # self.get_unsorted_csv_of_text()
         # self.most_positive = self.most_positive_five()
@@ -195,17 +254,7 @@ class Text(object):
         # self.most_negative = self.sentiments_with_lines[:40]
         # self.graphed = self.graph_sentiment()
 
-    def parse_filepath(self, is_a_poem_chunk):
-        # the book name and title will be in the filename
-        # will be of the form -  'corpus/all_books/brooks_in_the_mecca.txt'
-        base = os.path.basename(self.filename)
-        base_no_ext = os.path.splitext(base)[0]
-        results = base_no_ext.split('-')
-        author = results[0]
-        title = results[1]
-        return author, title
-
-    def get_total_sentiment(self):
+    def get_average_sentiment(self):
         """gives the average sentiment for a poem"""
         return sum(self.sentiment_values) / len(self.sentiment_values)
 
@@ -220,8 +269,6 @@ class Text(object):
     def get_sentiment_with_lines(self, usetextblob, usetrained, usevader):
         if usetextblob == 'True':
             if usetrained == 'True':
-                print('using textblob')
-                print('using trained!')
                 # Returns a list with two items: first item is a given line of
                 # poem, second item is that line's sentiment score.
                 results = []
@@ -234,7 +281,6 @@ class Text(object):
                 results = [(line, TextBlob(line).sentiment.polarity)
                               for line in self.stringified_sentences]
         elif usevader == 'True':
-            print('using vader')
             # Returns a list of 5 items: line of poem; negative score;
             # neutral score; postitive score; compound score.
             analyzer = SentimentIntensityAnalyzer()
@@ -280,13 +326,11 @@ class Text(object):
 
     def get_sentiment_values(self, usetextblob, usetrained, usevader):
         if usetextblob == 'True':
-            print('using textblob')
             # self.sentiments is currently a list of TextBlob objects.
             # What this does is loop over every object and return a list
             # of float decimals corresponding to the polarity attribute?
             return [val.polarity for val in self.sentiments]
         elif usevader == 'True':
-            print('using vader')
             # self.sentiments is currently a list of dictionaries. What
             # this does is to loop over every dictionary and return the
             # value for the 'compound' key, then make a list of all of
@@ -296,8 +340,6 @@ class Text(object):
     def get_sentiment(self, usetextblob, usetrained, usevader):
         if usetextblob == 'True':
             if usetrained == 'True':
-                print('using textblob')
-                print('using trained!')
                 # Returns a list with two items: first item is a given line of
                 # poem, second item is that line's sentiment score.
                 results = []
@@ -310,7 +352,6 @@ class Text(object):
             # each of which has two? attributes (polarity and subjectivity)
             return results
         elif usevader == 'True':
-            print('using vader')
             # If we've set it above in the Text(object) to use Vader,
             # this evaluates each line for sentiment. The example output
             # for each sentence is a dictionary with four entries:
@@ -411,6 +452,14 @@ def main():
 # len(the_corpus.texts)
 # see the tokens for the sixth poem
 # the_corpus.texts[5].tokens
+# this will tell you the average sentiment of each book
+# the_corpus.book_sentiments
+# using that, we can see what book we want to look at and give that name to another function:
+# the_corpus.most_positive_poems_in_book('embryo')
+# that gives us a list of each poem by average sentiment and with first line. you can use that first line to pull out a poem:
+# text_we_care_about = the_corpus.first_line_query('come sing a song')
+# text_we_care_about in this case is a text object, so we can do whatever text things we want, like get the sentiments with the lines.
+# text_we_care_about.sentiments_with_lines
 
 # to run from command line would be
 # python3 master_feelings.py --usevader True
