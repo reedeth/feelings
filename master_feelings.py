@@ -66,8 +66,8 @@ class Corpus(object):
         self.trained_classifier, self.training_data = self.train_classifier()
         # make texts from all the filenames
         self.texts = self.make_texts()
-        self.authors = [text.author for text in self.texts]
-        self.book_titles = [text.title for text in self.texts]
+        self.authors = list(set([text.author for text in self.texts]))
+        self.book_titles = list(set([text.book_title for text in self.texts]))
 
 
     def train_classifier(self):
@@ -167,7 +167,7 @@ class Text(object):
     def __init__(self, fn, training_data, trained_classifier, args, is_a_poem_chunk=False):
         # attributes live here
         self.filename = fn
-        self.book_title, self.author = self.parse_filepath(is_a_poem_chunk)
+        self.author, self.book_title = self.parse_filepath(is_a_poem_chunk)
         self.training_data = training_data
         self.trained_classifier = trained_classifier
         if is_a_poem_chunk:
@@ -196,27 +196,14 @@ class Text(object):
         # self.graphed = self.graph_sentiment()
 
     def parse_filepath(self, is_a_poem_chunk):
-        if is_a_poem_chunk:
-            # it must be a poem, so get the book and author name from the directory one level up.
-            # will be of the form - 'corpus/all_books/individual_poems/baraka-black_poems/……'
-            base = os.path.basename(self.filename)
-            base_no_ext = os.path.splitext(base)[0]
-            results = base_no_ext.split('-')
-            author = results[0]
-            title = results[1]
-            return author, title
-        else:
-            # the book name and title will be in the filename
-            # will be of the form -  'corpus/all_books/brooks_in_the_mecca.txt'
-            short_path = os.path.dirname(self.filename)[0]
-            base = os.path.basename(short_path)
-            print(self.filename)
-            print(base)
-            results = base.split('-')
-            print(results)
-            author = results[0]
-            title = results[1]
-            return author, title
+        # the book name and title will be in the filename
+        # will be of the form -  'corpus/all_books/brooks_in_the_mecca.txt'
+        base = os.path.basename(self.filename)
+        base_no_ext = os.path.splitext(base)[0]
+        results = base_no_ext.split('-')
+        author = results[0]
+        title = results[1]
+        return author, title
 
     def get_total_sentiment(self):
         """gives the average sentiment for a poem"""
