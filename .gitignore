@@ -1,6 +1,7 @@
 # hide texts
 
 corpus/*
+full_corpus/*
 
 practice/*
 __pycache__/*
