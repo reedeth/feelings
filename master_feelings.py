@@ -439,7 +439,7 @@ def main():
     args = parse_args()
     corpus_dir = 'corpus/'
     the_corpus = Corpus(corpus_dir, args)
-    print(len(the_corpus.texts))
+    print(the_corpus.most_positive_poems_in_book('embryo'))
 
 # how to run this in the interpreter
 # import master_feelings
